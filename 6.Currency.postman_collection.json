@@ -1,0 +1,99 @@
+{
+	"info": {
+		"_postman_id": "1abd623a-d15b-4ee9-a088-0006bbb6d20c",
+		"name": "Currency",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Currency",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let curr = JSON.parse (responseBody);\r",
+							"let random_num=_.random(curr.length);\r",
+							"let curr_id=curr[random_num].Cur_ID;\r",
+							"pm.environment.set(\"curr_code\", curr_id);\r",
+							"\r",
+							"let jsonData = pm.response.json();\r",
+							"\r",
+							"for (var k = 0; k < jsonData.lenght; k++) {\r",
+							"    curr_code = jsonData[k].Cur_ID;\r",
+							"\r",
+							"    const options = {\r",
+							"        'url': 'http://168.119.182.98:5002/curr_byn',\r",
+							"        'method': 'POST',\r",
+							"        'header': {\r",
+							"            'Content-Type': 'multipart/form-data',\r",
+							"        }, body: {\r",
+							"            mode: 'formdata',\r",
+							"            formdata:\r",
+							"                [\r",
+							"                    { key: 'curr_code', value: curr_code },\r",
+							"                    { key: 'auth_token', value: pm.environment.get(\"token\") }\r",
+							"                ]\r",
+							"        }\r",
+							"    };\r",
+							"\r",
+							"    pm.sendRequest(options, function (error, res) {\r",
+							"       \r",
+							"          switch (res.code) {\r",
+							"            case 500:\r",
+							"                break;\r",
+							"            case 200:\r",
+							"                const body = res.json();\r",
+							"      pm.test(\"Cur_OfficialRate is OK\", function() {\r",
+							"  pm.expect(body).to.have.property(\"Cur_OfficialRate\");\r",
+							"});\r",
+							"console.log(res.json())\r",
+							"                break;;\r",
+							"        }\r",
+							"    \r",
+							"      \r",
+							"    });\r",
+							"};\r",
+							"\r",
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "auth_token",
+							"value": "{{token}}",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{url}}/currency",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"currency"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
