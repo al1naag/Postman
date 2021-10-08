@@ -1,0 +1,295 @@
+				Тесты в Postman
+=======================================================================================================
+
+Приходящий токен необходимо передать во все остальные запросы.
+
+let res = JSON.parse (responseBody);
+pm.environment.set("token", res.token);
+
+=======================================================================================================
+
+Статус код 200
+
+pm.test("Status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+
+=======================================================================================================
+
+Проверка структуры json в ответе
+
+const schema = {
+    "type": "object",
+    "properties": {
+        "person": { 
+                "type": "object",
+                 "properties": {
+                     "u_age" : {"type": "integer"},
+                       "u_salary_1_5_year" : {"type":"integer"} ,
+                     "u_name" : {"type":"array",
+                       "items":  [
+                       {"type": "string"},
+                         {"type": "integer"},
+                             {"type": "integer"}]
+ }   }
+},
+ "qa_salary_after_12_months" : {"type" : "integer"},
+"qa_salary_after_6_months": {"type" : "integer"},
+"start_qa_salary": {"type" : "integer"}
+}};
+
+pm.test("Validate schema", () => {
+    pm.response.to.have.jsonSchema(schema);
+});
+
+=======================================================================================================
+
+В ответе указаны коэффициенты умножения salary, напишите тесты по проверке правильности результата перемножения на коэффициент.
+
+let req = JSON.parse(request.data)
+let salary = parseInt(req.salary)
+
+pm.test("Check qa_salary_after_6_months", function () { 
+pm.expect(pm.response.json().qa_salary_after_6_months).to.eql(pm.response.json().start_qa_salary*2)
+});
+pm.test("Check qa_salary_after_12_months", function () { 
+pm.expect(pm.response.json().qa_salary_after_12_months).to.eql(pm.response.json().start_qa_salary*2.9)
+});
+pm.test("Check u_salary_1_5_year", function () { 
+pm.expect(pm.response.json().person.u_salary_1_5_year).to.eql(pm.response.json().start_qa_salary*4)
+});
+
+=======================================================================================================
+
+Достать значение из поля 'u_salary_1.5_year' и передать в поле salary запроса http://162.55.220.72:5005/get_test_user
+
+   let resSalary = JSON.parse (responseBody);
+pm.environment.set("salary", resSalary.person.u_salary_1_5_year);
+
+=======================================================================================================
+
+В ответе указаны коэффициенты умножения salary, напишите тесты по проверке правильности результата перемножения на коэффициент
+
+pm.test("Check salary", function () { 
+pm.expect(parseInt(pm.response.json().salary[1])).to.eql(request.data.salary*2)
+pm.expect(parseInt(pm.response.json().salary[2])).to.eql(request.data.salary*3)
+
+
+=======================================================================================================
+
+Проверить, что 2-й элемент массива salary больше 1-го и 0-го
+
+pm.expect(parseInt(pm.response.json().salary[2])).to.be.above(pm.response.json().salary[0])
+pm.expect(parseInt(pm.response.json().salary[2])).to.be.above(parseInt(pm.response.json().salary[1]))
+});
+
+=======================================================================================================
+
+В ответе указаны коэффициенты умножения weight, напишите тесты по проверке правильности результата перемножения на коэффициент.
+
+pm.test("Check Weight", function() {
+pm.expect(pm.response.json().daily_food).to.eql(request.data.weight*0.012);
+});
+
+=======================================================================================================
+
+Проверить что значение поля name = значению переменной name из окружения
+
+pm.environment.set("name", "Alina");
+
+pm.test ("Name Check", function () { 
+    (pm.expect(pm.response.json().name).to.eql(pm.environment.get("name")))});
+
+=======================================================================================================
+
+Проверить что занчение поля age в ответе соответсвует отправленному в запросе значению поля age
+
+pm.test ("Age Check", function () { 
+    (pm.expect(request.data.age).to.eql(pm.response.json().age))});
+
+=======================================================================================================
+
+Можете взять любой объект из присланного списка, используйте js random.
+В объекте возьмите Cur_ID и передать через окружение в следующий запрос.
+
+let curr = JSON.parse (responseBody);
+let random_num=_.random(curr.length);
+let curr_id=curr[random_num].Cur_ID;
+pm.environment.set("curr_code", curr_id);
+
+=======================================================================================================
+
+/* ***
+1) получить список валют
+2) итерировать список валют
+3) в каждой итерации отправлять запрос на сервер для получения курса каждой валюты
+4) если возвращается 500 код, переходим к следующей итреации
+5) если получаем 200 код, проверяем response json на наличие поля "Cur_OfficialRate"
+6) если поле есть, пишем в консоль инфу про валюту в виде response
+7) переходим к следующей итерации
+*/
+let jsonData = pm.response.json();
+
+for (var k = 0; k < jsonData.length; k++) {
+    curr_code = jsonData[k].Cur_ID;
+
+    const options = {
+        'url': 'http://168.119.182.98:5002/curr_byn',
+        'method': 'POST',
+        'header': {
+            'Content-Type': 'multipart/form-data',
+        }, body: {
+            mode: 'formdata',
+            formdata:
+                [
+                    { key: 'curr_code', value: curr_code },
+                    { key: 'auth_token', value: pm.environment.get("token") }
+                ]
+        }
+    };
+
+    pm.sendRequest(options, function (error, res) {
+       
+          switch (res.code) {
+            case 500:
+                break;
+            case 200:
+                const body = res.json();
+      pm.test("Cur_OfficialRate is OK", function() {
+  pm.expect(body).to.have.property("Cur_OfficialRate");
+});
+console.log(res.json())
+                break;;
+        }
+    
+      
+    });
+};
+
+
+=======================================================================================================
+
+Проверить, что в body приходит правильный string
+
+pm.test("Body is correct", function () {
+    pm.response.to.have.body("This is the first responce from server!");
+});
+=======================================================================================================
+
+Проверить, что name в ответе равно name s request (name вбить руками.)
+Проверить, что age в ответе равно age s request (age вбить руками.)
+Проверить, что salary в ответе равно salary s request (salary вбить руками.)
+
+pm.test("Name test", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.name).to.eql('Alina');
+});
+pm.test("Age test", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.age).to.eql('35');
+});
+pm.test("Salary test", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.salary).to.eql(2000);
+});
+
+=======================================================================================================
+
+Проверить, что name в ответе равно name s request (name забрать из request.)
+Проверить, что age в ответе равно age s request (age забрать из request.)
+Проверить, что salary в ответе равно salary s request (salary забрать из request.)
+
+pm.test("Name test from request", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.name).to.eql(request.data.name);
+});
+pm.test("Age test from request", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.age).to.eql(request.data.age);
+});
+pm.test("Salary test from request", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.salary).to.eql(parseInt(request.data.salary));
+});
+
+=======================================================================================================
+
+Вывести в консоль параметр family из response.
+
+var jsonData = pm.response.json();
+console.log(jsonData.family)
+
+=======================================================================================================
+
+Проверить что u_salary_1_5_year в ответе равно salary*4 (salary забрать из request)
+
+pm.test("u_salary_1_5_year", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.family.u_salary_1_5_year).to.eql(parseInt(request.data.salary*4));
+});
+
+=======================================================================================================
+
+Проверить, что name в ответе равно name s request (name забрать из request.)
+Проверить, что age в ответе равно age s request (age забрать из request.)
+Проверить, что salary в ответе равно salary s request (salary забрать из request.)
+
+pm.test("Name test from request", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.name).to.eql(pm.request.url.query.toObject().name);
+});
+
+pm.test("Age test from request", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.age).to.eql(pm.request.url.query.toObject().age);
+});
+pm.test("Salary test from request", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.salary).to.eql(parseInt(pm.request.url.query.toObject().salary));
+});
+
+=======================================================================================================
+
+Проверить, что у параметра dog есть параметры name.
+Проверить, что у параметра dog есть параметры age.
+Проверить, что параметр name имеет значение Luky.
+Проверить, что параметр age имеет значение 4.
+
+
+pm.test("Dog has name property", function() {
+    var jsonData = pm.response.json();
+  pm.expect(jsonData.family.pets.dog).to.have.property("name");
+});
+
+pm.test("Dog has age property", function() {
+    var jsonData = pm.response.json();
+  pm.expect(jsonData.family.pets.dog).to.have.property("age");
+});
+
+pm.test("Dog's name is Lucky", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.family.pets.dog.name).to.eql("Luky");
+});
+
+pm.test("Dog's age is 4", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.family.pets.dog.age).to.eql(4);
+});
+
+=======================================================================================================
+
+Проверить, что name в ответе равно name s request (name забрать из request.)
+Проверить, что age в ответе равно age из request (age забрать из request.)
+
+pm.test("Name in response =  from request", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.name).to.eql(pm.request.url.query.toObject().name);
+});
+
+pm.test("Age in response = from request", function () {
+    var jsonData = pm.response.json();
+    pm.expect(jsonData.age).to.eql(parseInt(pm.request.url.query.toObject().age));
+});
+
+=======================================================================================================
+
